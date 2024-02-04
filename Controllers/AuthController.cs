@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -46,10 +47,12 @@ namespace GoogleAuthAPI.Controllers
             var tokenHandler = new JwtSecurityTokenHandler();
             try
             {
+                var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+
                 tokenHandler.ValidateToken(token, new TokenValidationParameters
                 {
                     ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes("U*7vI@2yS!5fT#1lN6oM$8b")),
+                    IssuerSigningKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration["MyJwtSecretKey"])),
                     ValidateIssuer = false,
                     ValidateAudience = false
                 }, out SecurityToken validatedToken);
@@ -99,7 +102,7 @@ namespace GoogleAuthAPI.Controllers
                 {
                     HttpOnly = true,
                     Secure = true,
-                    SameSite = SameSiteMode.Strict
+                    SameSite = SameSiteMode.Lax
                 });
             }
 
@@ -108,13 +111,14 @@ namespace GoogleAuthAPI.Controllers
 
         private string GenerateJwtToken(string email)
         {
-            var securityKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes("U*7vI@2yS!5fT#1lN6oM$8b"));
+            var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+            var securityKey = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(configuration["MyJwtSecretKey"]));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Email, email) }),
-                Expires = DateTime.UtcNow.AddDays(1),
+                Expires = DateTime.Now.AddDays(1),
                 SigningCredentials = credentials
             };
 
